@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Photo Recap Prototype</title>
+<style>
+  :root { --accent:#ff3366; --accent2:#7c4dff; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; height:100%; background:#0a0a0a; color:#fff; overflow:hidden;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+
+  /* ---------- ЗАГРУЗКА ---------- */
+  #upload-screen { display:flex; flex-direction:column; align-items:center; justify-content:center;
+    height:100%; text-align:center; padding:24px; gap:8px; }
+  #upload-screen h1 { font-size:clamp(1.6rem,6vw,2.4rem); margin:0; }
+  #upload-screen p { color:#888; margin:0 0 24px; }
+  .upload-btn { background:var(--accent); color:#fff; border:0; padding:15px 32px; font-size:1.05rem;
+    border-radius:50px; cursor:pointer; font-weight:700; transition:transform .2s; }
+  .upload-btn:hover { transform:scale(1.05); }
+  #file-input { display:none; }
+  #upload-screen.drag { outline:2px dashed var(--accent); outline-offset:-16px; }
+
+  /* ---------- РЕКАП ---------- */
+  #recap-screen { display:none; position:fixed; inset:0; }
+  #slides-container { position:absolute; inset:0; }
+  .slide { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; padding:24px; overflow:hidden; opacity:0; pointer-events:none;
+    transition:opacity .55s ease; }
+  .slide.active { opacity:1; pointer-events:auto; }
+
+  .slide-content { position:relative; z-index:5; text-align:center; max-width:min(560px,90vw); }
+  h1.big { font-size:clamp(2rem,9vw,3.4rem); margin:0 0 12px; line-height:1.05; letter-spacing:-.02em; }
+  h2.title { font-size:clamp(1.5rem,6vw,2.2rem); margin:0 0 6px; }
+  .sub { color:#b9b9c4; margin:0; font-size:clamp(.9rem,3.4vw,1.05rem); }
+  .stat-number { font-size:clamp(3.5rem,20vw,7rem); font-weight:800; margin:0; line-height:1;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .stat-label { font-size:clamp(1rem,4.5vw,1.35rem); margin:8px 0 0; }
+  .mini-row { display:flex; gap:10px; justify-content:center; margin-top:28px; flex-wrap:wrap; }
+  .mini { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.1);
+    padding:10px 14px; border-radius:14px; font-size:.9rem; }
+  .mini b { display:block; font-size:1.3rem; }
+
+  /* появление элементов */
+  @keyframes pop { from{opacity:0; transform:translateY(26px) scale(.94)} to{opacity:1; transform:none} }
+  .slide.active .anim { animation:pop .7s cubic-bezier(.2,.8,.2,1) both; animation-delay:var(--d,0s); }
+
+  /* места */
+  .places { display:flex; flex-direction:column; gap:10px; margin-top:24px; width:min(420px,86vw); }
+  .place { display:flex; align-items:center; gap:14px; text-align:left;
+    background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.1);
+    padding:10px 14px; border-radius:18px; }
+  .place img { width:54px; height:54px; border-radius:12px; object-fit:cover; flex:none; }
+  .place .name { font-weight:700; }
+  .place .cnt { color:#9a9aa6; font-size:.85rem; }
+
+  /* лучшие фото */
+  .best-row { display:flex; justify-content:center; align-items:flex-end; gap:10px; margin-top:28px; }
+  .best-row img { width:min(27vw,140px); aspect-ratio:3/4; object-fit:cover; border-radius:16px;
+    border:3px solid #fff; box-shadow:0 16px 40px rgba(0,0,0,.55); }
+  .best-row img:nth-child(1){ transform:rotate(-7deg) }
+  .best-row img:nth-child(2){ transform:translateY(-16px) scale(1.06) }
+  .best-row img:nth-child(3){ transform:rotate(7deg) }
+
+  /* коллаж: рандомный разброс */
+  .collage-item { position:absolute; left:var(--l); top:var(--t); width:var(--w);
+    max-width:230px; min-width:78px; aspect-ratio:var(--ar); object-fit:cover;
+    border:3px solid #fff; border-radius:12px; box-shadow:0 14px 34px rgba(0,0,0,.55);
+    transform:translate(-50%,-50%) rotate(var(--r)); }
+  @keyframes scatter {
+    from { opacity:0; transform:translate(-50%,-50%) rotate(var(--r)) scale(.3) }
+    to   { opacity:1; transform:translate(-50%,-50%) rotate(var(--r)) scale(1) }
+  }
+  .slide.active .collage-item { animation:scatter .65s cubic-bezier(.2,1.3,.3,1) both; animation-delay:var(--d); }
+  .collage-caption { position:absolute; bottom:56px; left:50%; transform:translateX(-50%); z-index:99;
+    background:rgba(0,0,0,.55); backdrop-filter:blur(12px); padding:12px 22px; border-radius:50px;
+    font-weight:700; white-space:nowrap; }
+
+  /* фото-слайд */
+  .photo-bg { position:absolute; inset:0; background-size:cover; background-position:center; }
+  @keyframes kenburns { from{transform:scale(1.02)} to{transform:scale(1.16) translate(-1.5%,-1%)} }
+  .slide.active .photo-bg { animation:kenburns 8s ease-out forwards; }
+
+  /* прогресс + управление */
+  #progress { position:absolute; top:14px; left:12px; right:12px; display:flex; gap:4px; z-index:200; }
+  #progress .seg { flex:1; height:3px; background:rgba(255,255,255,.25); border-radius:2px; overflow:hidden; }
+  #progress .seg i { display:block; height:100%; width:0; background:#fff; }
+  #auto-btn { position:absolute; top:30px; right:14px; z-index:200; background:rgba(0,0,0,.45);
+    color:#fff; border:0; width:36px; height:36px; border-radius:50%; cursor:pointer; font-size:.9rem; }
+  .nav-hint { position:absolute; bottom:18px; left:50%; transform:translateX(-50%); z-index:200;
+    color:rgba(255,255,255,.45); font-size:.78rem; }
+</style>
+</head>
+<body>
+
+<div id="upload-screen">
+  <h1>Твои воспоминания ✨</h1>
+  <p>Загрузи от 3 до 30 фото — или просто перетащи их сюда</p>
+  <button class="upload-btn" onclick="document.getElementById('file-input').click()">Выбрать фото</button>
+  <input type="file" id="file-input" multiple accept="image/*">
+</div>
+
+<div id="recap-screen">
+  <div id="progress"></div>
+  <button id="auto-btn" title="Автоплей">⏸</button>
+  <div id="slides-container"></div>
+  <div class="nav-hint">тап — дальше · слева — назад</div>
+</div>
+
+<script>
+/* ================= НАСТРОЙКИ (крути тут) ================= */
+const CONFIG = {
+  year: 2026,
+  stats: { photos: 1248, smiles: 94, sunsets: 6, selfies: 12, cats: 3 },
+  places: ['Лиссабон, Португалия','Тбилиси, Грузия','Стамбул, Турция','Алматы, Казахстан',
+           'Ереван, Армения','Бали, Индонезия','Прага, Чехия','Дубай, ОАЭ',
+           'Барселона, Испания','Рейкьявик, Исландия'],
+  bestCount: 3,
+  collageMax: 12,
+  autoplay: true,
+  dur: { hi:3000, stat:3800, places:4500, best:4000, collage:5000, photo:2600 }
+};
+/* ======================================================== */
+
+const $ = s => document.querySelector(s);
+const fileInput=$('#file-input'), uploadScreen=$('#upload-screen'), recapScreen=$('#recap-screen'),
+      box=$('#slides-container'), progress=$('#progress'), autoBtn=$('#auto-btn');
+
+let images=[], slides=[], durations=[], current=0, timer=null, raf=null, autoplay=CONFIG.autoplay;
+
+const rnd=(a,b)=>Math.random()*(b-a)+a;
+const rndInt=(a,b)=>Math.floor(rnd(a,b+1));
+const shuffle=a=>a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(v=>v[1]);
+const sample=(a,n)=>shuffle(a).slice(0,n);
+
+/* ---------- загрузка ---------- */
+fileInput.addEventListener('change', e => handleFiles(e.target.files));
+['dragover','dragenter'].forEach(ev=>uploadScreen.addEventListener(ev,e=>{e.preventDefault();uploadScreen.classList.add('drag')}));
+['dragleave','drop'].forEach(ev=>uploadScreen.addEventListener(ev,e=>{e.preventDefault();uploadScreen.classList.remove('drag')}));
+uploadScreen.addEventListener('drop', e => handleFiles(e.dataTransfer.files));
+
+function handleFiles(list){
+  const files=[...list].filter(f=>f.type.startsWith('image/'));
+  if(files.length<3){ alert('Нужно минимум 3 фото'); fileInput.value=''; return; }
+  images=files.slice(0,30).map(f=>URL.createObjectURL(f)); // порядок сохраняется
+  buildRecap();
+}
+
+/* ---------- сборка сценария ---------- */
+function addSlide(html,{bg='#0a0a0a',dur=3500}={}){
+  const el=document.createElement('div');
+  el.className='slide'; el.style.background=bg; el.innerHTML=html;
+  box.appendChild(el); slides.push(el); durations.push(dur);
+}
+
+function buildRecap(){
+  box.innerHTML=''; slides=[]; durations=[];
+  const S=CONFIG.stats;
+
+  /* 1. Приветствие */
+  addSlide(`
+    <div class="slide-content">
+      <div class="anim" style="font-size:3.4rem">👋</div>
+      <h1 class="big anim" style="--d:.15s">Привет!</h1>
+      <p class="sub anim" style="--d:.3s">Это твой ${CONFIG.year} в фотографиях.<br>Листай — всё самое важное внутри.</p>
+    </div>`,
+    {bg:'radial-gradient(120% 90% at 20% 10%,#3a1050 0%,#0a0a0a 60%)', dur:CONFIG.dur.hi});
+
+  /* 2. Статистика #1 (константа) */
+  addSlide(`
+    <div class="slide-content">
+      <p class="sub anim">в этом году ты сохранил</p>
+      <p class="stat-number anim" style="--d:.1s" data-count="${S.photos}">0</p>
+      <p class="stat-label anim" style="--d:.2s">кадров</p>
+      <p class="sub anim" style="--d:.35s;margin-top:18px">это в 3 раза больше, чем в прошлом году</p>
+    </div>`,
+    {bg:'radial-gradient(110% 80% at 80% 20%,#4a1030 0%,#0a0a0a 65%)', dur:CONFIG.dur.stat});
+
+  /* 3. Статистика #2 (константа) */
+  addSlide(`
+    <div class="slide-content">
+      <p class="stat-number anim" data-count="${S.smiles}" data-suffix="%">0</p>
+      <p class="stat-label anim" style="--d:.15s">моментов — с улыбкой</p>
+      <div class="mini-row">
+        <div class="mini anim" style="--d:.3s"><b>${S.sunsets}</b>закатов</div>
+        <div class="mini anim" style="--d:.4s"><b>${S.selfies}</b>селфи</div>
+        <div class="mini anim" style="--d:.5s"><b>${S.cats}</b>котика</div>
+      </div>
+    </div>`,
+    {bg:'radial-gradient(110% 90% at 30% 80%,#101a4a 0%,#0a0a0a 65%)', dur:CONFIG.dur.stat});
+
+  /* 4. Новые места (рандом) */
+  const places=sample(CONFIG.places, rndInt(2,4));
+  addSlide(`
+    <div class="slide-content">
+      <h2 class="title anim">Новые места 📍</h2>
+      <p class="sub anim" style="--d:.1s">Ты открыл ${places.length} новых места</p>
+      <div class="places">
+        ${places.map((p,i)=>`
+          <div class="place anim" style="--d:${.2+i*.15}s">
+            <img src="${images[rndInt(0,images.length-1)]}">
+            <div><div class="name">${p}</div><div class="cnt">${rndInt(8,140)} фото</div></div>
+          </div>`).join('')}
+      </div>
+    </div>`,
+    {bg:'radial-gradient(110% 90% at 70% 30%,#0d3a34 0%,#0a0a0a 65%)', dur:CONFIG.dur.places});
+
+  /* 5. Лучшие фото (рандом) */
+  addSlide(`
+    <div class="slide-content">
+      <h2 class="title anim">Лучшие фото ⭐</h2>
+      <p class="sub anim" style="--d:.1s">Те, что ты пересматривал чаще всего</p>
+      <div class="best-row">
+        ${sample(images,CONFIG.bestCount).map((src,i)=>
+          `<img class="anim" style="--d:${.2+i*.15}s" src="${src}">`).join('')}
+      </div>
+    </div>`,
+    {bg:'radial-gradient(110% 90% at 50% 0%,#4a2a08 0%,#0a0a0a 65%)', dur:CONFIG.dur.best});
+
+  /* 6. Коллаж: рандомные позиции по всему экрану */
+  addSlide(collageHTML()+`<div class="collage-caption anim" style="--d:.9s">Твой год в кадрах</div>`,
+    {bg:'#111', dur:CONFIG.dur.collage});
+
+  /* 7. Все фото по одному, без подписей */
+  images.forEach(src=>addSlide(`<div class="photo-bg" style="background-image:url('${src}')"></div>`,
+    {bg:'#000', dur:CONFIG.dur.photo}));
+
+  /* 8. Финал */
+  addSlide(`
+    <div class="slide-content">
+      <h1 class="big anim">Спасибо за год! 🎉</h1>
+      <p class="sub anim" style="--d:.15s">Дальше — только больше кадров</p>
+      <button class="upload-btn anim" style="--d:.3s;margin-top:26px" onclick="resetRecap()">Создать новый</button>
+    </div>`,
+    {bg:'radial-gradient(120% 90% at 50% 100%,#3a1050 0%,#0a0a0a 60%)', dur:4000});
+
+  progress.innerHTML=slides.map(()=>'<div class="seg"><i></i></div>').join('');
+  uploadScreen.style.display='none';
+  recapScreen.style.display='block';
+  autoBtn.textContent=autoplay?'⏸':'▶';
+  showSlide(0);
+}
+
+function collageHTML(){
+  const pics=sample(images, Math.min(images.length, CONFIG.collageMax));
+  const cols=3, rows=Math.ceil(pics.length/cols), cw=100/cols, ch=100/rows;
+  const ratios=[0.75,0.8,1,1.25];
+  return pics.map((src,i)=>{
+    const c=i%cols, r=Math.floor(i/cols);
+    const left=Math.min(88,Math.max(12,(c+.5)*cw+rnd(-cw*.18,cw*.18)));
+    const top =Math.min(88,Math.max(12,(r+.5)*ch+rnd(-ch*.16,ch*.16)));
+    const w=rnd(cw*.62,cw*.98).toFixed(1);
+    return `<img class="collage-item" src="${src}" style="--l:${left}%;--t:${top}%;--w:${w}%;
+      --r:${rnd(-15,15).toFixed(1)}deg;--ar:${ratios[rndInt(0,3)]};--d:${(i*.07).toFixed(2)}s;z-index:${i+1}">`;
+  }).join('');
+}
+
+/* ---------- плеер ---------- */
+function showSlide(i){
+  current=Math.max(0,Math.min(slides.length-1,i));
+  slides.forEach(s=>s.classList.remove('active'));
+  void box.offsetWidth;                        // рестарт анимаций
+  slides[current].classList.add('active');
+  runCounters(slides[current]);
+  paintProgress();
+  clearTimeout(timer);
+  if(autoplay && current<slides.length-1) timer=setTimeout(next,durations[current]);
+}
+const next=()=>{ if(current<slides.length-1) showSlide(current+1); };
+const prev=()=>showSlide(current-1);
+
+function paintProgress(){
+  const segs=[...progress.querySelectorAll('.seg i')];
+  segs.forEach((f,i)=>{ f.style.transition='none'; f.style.width=i<current?'100%':'0%'; });
+  void progress.offsetWidth;
+  const f=segs[current];
+  const d=autoplay?durations[current]:250;
+  f.style.transition=`width ${d}ms linear`; f.style.width='100%';
+}
+
+function runCounters(scope){
+  if(raf) cancelAnimationFrame(raf);
+  const els=[...scope.querySelectorAll('[data-count]')];
+  if(!els.length) return;
+  const t0=performance.now(), dur=1100;
+  const tick=now=>{
+    const p=Math.min(1,(now-t0)/dur), e=1-Math.pow(1-p,3);
+    els.forEach(el=>el.textContent=Math.round(+el.dataset.count*e).toLocaleString('ru-RU')+(el.dataset.suffix||''));
+    if(p<1) raf=requestAnimationFrame(tick);
+  };
+  raf=requestAnimationFrame(tick);
+}
+
+recapScreen.addEventListener('click',e=>{
+  if(e.target.closest('button')) return;
+  (e.clientX/window.innerWidth<0.25) ? prev() : next();
+});
+document.addEventListener('keydown',e=>{
+  if(recapScreen.style.display!=='block') return;
+  if(e.key==='ArrowRight'||e.key===' ') next();
+  if(e.key==='ArrowLeft') prev();
+});
+autoBtn.addEventListener('click',()=>{
+  autoplay=!autoplay; autoBtn.textContent=autoplay?'⏸':'▶'; showSlide(current);
+});
+
+function resetRecap(){
+  clearTimeout(timer); if(raf) cancelAnimationFrame(raf);
+  images.forEach(URL.revokeObjectURL);
+  images=[]; slides=[]; durations=[]; current=0;
+  box.innerHTML=''; progress.innerHTML=''; fileInput.value='';
+  recapScreen.style.display='none'; uploadScreen.style.display='flex';
+}
+</script>
+</body>
+</html>
