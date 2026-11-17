@@ -1,5 +1,6 @@
 # TODO: broken photos mustn't crash anything
 import asyncio
+import os
 from pathlib import Path
 
 import numpy as np
@@ -15,7 +16,7 @@ class DummyPhotoLoader(BasePhotoLoader):
 
 
 class LocalPhotoLoader(BasePhotoLoader):
-    def __init__(self, base_dir: str):
+    def __init__(self, base_dir: os.PathLike):
         self.base_dir = Path(base_dir)
 
     async def load_photos(self, photo_ids: list[str]) -> list:
