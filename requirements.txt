@@ -19,6 +19,7 @@ dnspython==2.9.2
 docopt==0.6.2
 email-validator==2.4.0
 executing==2.3.0
+fakeredis==2.40.0
 fastapi==0.163.1
 fastapi-cli==0.0.34
 fastapi-cloud-cli==0.28.0
@@ -33,6 +34,7 @@ httptools==0.9.0
 httpx==0.28.1
 httpx2==2.16.2
 idna==3.20
+iniconfig==2.3.1
 ipython==8.12.3
 jedi==0.20.1
 Jinja2==3.1.6
@@ -65,6 +67,7 @@ pexpect==4.9.0
 pickleshare==0.7.5
 pipreqs==0.5.0
 platformdirs==4.14.5
+pluggy==1.7.0
 prompt_toolkit==3.0.53
 protobuf==7.36.2
 ptyprocess==0.7.0
@@ -75,6 +78,8 @@ pydantic-settings==2.16.3
 pydantic_core==2.50.4
 Pygments==2.21.0
 PyJWT==2.15.1
+pytest==9.2.0
+pytest-asyncio==1.5.0
 python-dateutil==4.0.0
 python-dotenv==1.2.4
 python-multipart==0.0.34
@@ -89,10 +94,11 @@ rignore==0.8.1
 rpds-py==2026.9.1
 sentry-sdk==2.75.0
 shellingham==1.5.4
+sortedcontainers==2.4.0
 soupsieve==4.1.1
 stack-data==0.6.3
 starlette==1.10.0
--e git+https://github.com/VK-Summer-Recap-edu-project/Summer-recap@eaf58bf2705b47a44d3f66c44cee90053ec3c18d#egg=summer_recap
+-e git+https://github.com/VK-Summer-Recap-edu-project/Summer-recap@5d3aa9628df05cd7740665110761a614b1c3068e#egg=summer_recap
 tinycss2==1.5.1
 tornado==6.6.1
 traitlets==5.16.1

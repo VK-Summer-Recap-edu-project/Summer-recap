@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 
 from arq.connections import ArqRedis
@@ -25,14 +24,14 @@ async def process_task(ctx, task_id: str, photo_ids: list[str]):
     logging.debug(f"processing job {task_id}")
     for i in range(0, len(photo_ids), batch_size):
         logging.debug(f"starting batch {i}")
-        batch_ids = photo_ids[i : i + batch_size]
-        photos_batch = await adapter.load_photos(batch_ids)
-        batch_results = await asyncio.to_thread(ml_model, photos_batch)
-        num_processed += 1
         await state_manager.set_state(
             task_id,
             TaskState(status="processing", progress=num_processed),
         )
+        batch_ids = photo_ids[i : i + batch_size]
+        photos_batch = await adapter.load_photos(batch_ids)
+        batch_results = await asyncio.to_thread(ml_model, photos_batch)
+        num_processed += len(batch_ids)
         results.extend(batch_results)
     logging.debug(f"finishing job {task_id}")
     await state_manager.set_state(
