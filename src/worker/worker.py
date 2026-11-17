@@ -1,9 +1,10 @@
+import asyncio
 import json
 import logging
 
 from arq.connections import ArqRedis
 
-from adapters.base import DummyPhotoLoader
+from adapters.photo_loaders import DummyPhotoLoader
 from ml.model import DummyModel
 
 ml_model = DummyModel()
@@ -23,7 +24,7 @@ async def process_task(ctx, task_id: str, photo_ids: list[str]):
         logging.debug(f"starting batch {i}")
         batch_ids = photo_ids[i : i + batch_size]
         photos_batch = await adapter.load_photos(batch_ids)
-        batch_results = ml_model(photos_batch)
+        batch_results = await asyncio.to_thread(ml_model, photos_batch)
         num_processed += 1
         await redis.set(
             f"task:{task_id}",
