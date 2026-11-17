@@ -1,8 +1,15 @@
-from fastapi import FastAPI
+import logging
 from contextlib import asynccontextmanager
+
 from arq import create_pool
 from arq.connections import RedisSettings
+from fastapi import FastAPI
+
 from api.routers import tasks
+
+logging.basicConfig(
+    level=logging.DEBUG,
+)
 
 
 @asynccontextmanager

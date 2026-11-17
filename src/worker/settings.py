@@ -1,5 +1,6 @@
-from worker.worker import process_task
 from arq.connections import RedisSettings
+
+from worker.worker import process_task
 
 
 class WorkerSettings:

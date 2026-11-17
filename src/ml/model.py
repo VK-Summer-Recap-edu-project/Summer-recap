@@ -8,6 +8,7 @@ class BaseModel:
 
 class DummyModel(BaseModel):
     def __call__(self, images: list) -> list:
+        print("processing images...")
         time.sleep(random.randint(0, 4))
         return [
             {"foo": random.randint(1, 5), "bar": random.random()}
