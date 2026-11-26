@@ -15,7 +15,7 @@ async def fake_redis():
     redis = FakeAsyncRedis()
 
     # Mock ARQ's custom enqueue method
-    redis.enqueue_job = AsyncMock(return_value=None)
+    redis.enqueue_job = AsyncMock(return_value=None)  # pyright: ignore[reportAttributeAccessIssue]
 
     yield redis
     await redis.aclose()
