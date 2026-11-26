@@ -29,7 +29,7 @@ async def process_task(ctx, task_id: str, photo_ids: list[str]):
             TaskState(status="processing", progress=num_processed),
         )
         batch_ids = photo_ids[i : i + batch_size]
-        photos_batch = await adapter.load_photos(batch_ids)
+        photos_batch, failed_ids = await adapter.load_photos(batch_ids)
         batch_results = await asyncio.to_thread(ml_model, photos_batch)
         num_processed += len(batch_ids)
         results.extend(batch_results)
