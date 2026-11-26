@@ -17,3 +17,4 @@ class TaskState(BaseModel):
     status: Literal["queued", "processing", "done"]
     progress: int
     results: Optional[list] = None
+    failed_photos: list[FailedPhoto] = []
