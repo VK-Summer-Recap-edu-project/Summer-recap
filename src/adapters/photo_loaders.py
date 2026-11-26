@@ -21,8 +21,8 @@ class BasePhotoLoader:
 
 class DummyPhotoLoader(BasePhotoLoader):
     async def load_photos(self, photo_ids: list[str]) -> tuple[list, list[FailedPhoto]]:
-        num_failed = np.random.randint(1, len(photo_ids) - 1)
-        failed_ids = np.random.choice(photo_ids, num_failed).tolist()
+        num_failed = np.random.randint(1, len(photo_ids))
+        failed_ids = np.random.choice(photo_ids, num_failed, replace=False).tolist()
         failed = [FailedPhoto(id, "womp womp") for id in failed_ids]
         return (
             np.random.random((len(photo_ids) - num_failed, 32, 32)).tolist(),
